@@ -1,21 +1,5 @@
 version: '3.7'
 services:
-    # mariadb:
-    #     image: mariadb
-    #     container_name: "mariadb"
-    #     ports:
-    #         # only allow port 3306 access from localhost only
-    #         - "127.0.0.1:3306:3306"
-    #     volumes:
-    #         - "./db/mariadb:/var/lib/mysql:rw"
-    #         - "./etc/mysql/:/etc/mysql/"
-    #     environment:
-    #         # ALLOW_EMPTY_PASSWORD is recommended only for development.
-    #         # - "MYSQL_ALLOW_EMPTY_PASSWORD=yes"
-    #         - "MYSQL_ROOT_PASSWORD=12345"
-    #         - "SET GLOBAL sql_mode =''"
-    #     networks:
-    #         - docker_webstack
     mysql:
         image: mysql
         container_name: "mysql"
@@ -78,15 +62,6 @@ services:
             - "./projects/:/var/www/projects"
         networks:
             - docker_webstack
-    # php5.fpm:
-    #     build: php-stack-5.6.30-fpm
-    #     container_name: "php5.fpm"
-    #     restart: always
-    #     volumes:
-    #         - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-    #         - "./projects/:/var/www/projects"
-    #     networks:
-    #         - docker_webstack
     mailhog:
         image: mailhog/mailhog
         container_name: "mailhog"

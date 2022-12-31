@@ -1,0 +1,205 @@
+version: '3.7'
+services:
+    # mariadb:
+    #     image: mariadb
+    #     container_name: "mariadb"
+    #     ports:
+    #         # only allow port 3306 access from localhost only
+    #         - "127.0.0.1:3306:3306"
+    #     volumes:
+    #         - "./db/mariadb:/var/lib/mysql:rw"
+    #         - "./etc/mysql/:/etc/mysql/"
+    #     environment:
+    #         # ALLOW_EMPTY_PASSWORD is recommended only for development.
+    #         # - "MYSQL_ALLOW_EMPTY_PASSWORD=yes"
+    #         - "MYSQL_ROOT_PASSWORD=12345"
+    #         - "SET GLOBAL sql_mode =''"
+    #     networks:
+    #         - docker_webstack
+    # nodejs:
+    #     build: nodejs
+    #     container_name: "nodejs"
+    #     restart: on-failure
+    #     command: npm run dev
+    #     ports:
+    #         - "3000:3000"
+    #     networks:
+    #         - docker_webstack
+    mysql:
+        image: mysql
+        container_name: "mysql"
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: root123
+        ports:
+            - "3306:3306"
+        volumes:
+            - ./db/mysql:/var/lib/mysql
+        networks:
+            - docker_webstack
+    mssql:
+        image: mcr.microsoft.com/mssql/server
+        container_name: "mssql"
+        restart: always
+        ports:
+            - "1433:1433"
+        volumes:
+            - "./db/mssql:/var/opt/mssql/data"
+        environment:
+            - ACCEPT_EULA=Y
+            - SA_PASSWORD=P@ssw0rd
+        networks:
+            - docker_webstack
+    # mongo:
+    #     image: mongo
+    #     container_name: "mongo"
+    #     # restart: always
+    #     tty: true
+    #     ports:
+    #         - "27017:27017"
+    #     volumes:
+    #         - "./db/mongodb:/data/db"
+    #         - "./etc/mongo/mongod.conf:/etc/mongod.conf"
+    #     environment:
+    #         MONGO_INITDB_ROOT_USERNAME: root
+    #         MONGO_INITDB_ROOT_PASSWORD: P@ssw0rd
+    #     command: --storageEngine wiredTiger
+    #     networks:
+    #         - docker_webstack
+    nginx:
+        image: nginx:latest
+        container_name: "nginx"
+        ports:
+            - "80:80"
+            - "443:443"
+        restart: always
+        volumes:
+            - "./etc/nginx/default.conf:/etc/nginx/conf.d/default.conf"
+            - "./etc/ssl:/etc/ssl"
+            - "./projects/:/var/www/projects"
+        depends_on:
+            - php8.fpm
+            - php7.fpm
+            - mysql
+            - mssql
+            - mailhog
+        networks:
+            - docker_webstack
+    php8.fpm:
+        build: php-stack-8-fpm
+        container_name: "php8.fpm"
+        restart: always
+        volumes:
+            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            - "./projects/:/var/www/projects"
+        networks:
+            - docker_webstack
+    php7.fpm:
+        build: php-stack-7-fpm
+        container_name: "php7.fpm"
+        restart: always
+        volumes:
+            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            - "./projects/:/var/www/projects"
+        networks:
+            - docker_webstack
+    # php5.fpm:
+    #     build: php-stack-5.6.30-fpm
+    #     container_name: "php5.fpm"
+    #     restart: always
+    #     volumes:
+    #         - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+    #         - "./projects/:/var/www/projects"
+    #     networks:
+    #         - docker_webstack
+    mailhog:
+        image: mailhog/mailhog
+        container_name: "mailhog"
+        restart: always
+        logging:
+            driver: 'none' # disable saving logs
+        ports:
+            - "1025:1025" # smtp server
+            - "8025:8025" # web ui
+        networks:
+            - docker_webstack
+    redis:
+        image: redis
+        container_name: "redis"
+        restart: always
+        volumes:
+            - ./db/redis:/data/db
+        ports:
+            - "6379:6379"    
+        networks:
+            - docker_webstack
+    # elasticsearch:
+    #     container_name: "elasticsearch"
+    #     build:
+    #         context: elasticsearch
+    #         args:
+    #             ELK_VERSION: 8.3.3
+    #     volumes:
+    #         - type: bind
+    #           source: ./etc/elasticsearch/config/elasticsearch.yml
+    #           target: /usr/share/elasticsearch/config/elasticsearch.yml
+    #           read_only: true
+    #         - type: bind
+    #           source: ./etc/elasticsearch/
+    #           target: /usr/share/elasticsearch/data/
+    #     ports:
+    #         - "9200:9200"
+    #         - "9300:9300"
+    #     environment:
+    #         ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+    #         ELASTIC_PASSWORD: changeme
+    #         # Use single node discovery in order to disable production mode and avoid bootstrap checks
+    #         # see https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
+    #         discovery.type: single-node
+    #     networks:
+    #         - docker_webstack
+    # logstash:
+    #     container_name: "logstash"
+    #     build:
+    #         context: logstash
+    #         args:
+    #             ELK_VERSION: 8.3.3
+    #     volumes:
+    #         - type: bind
+    #           source: ./etc/logstash/config/logstash.yml
+    #           target: /usr/share/logstash/config/logstash.yml
+    #           read_only: true
+    #         - type: bind
+    #           source: ./etc/logstash/pipeline/
+    #           target: /usr/share/logstash/pipeline/
+    #           read_only: true
+    #     ports:
+    #         - "5000:5000/tcp"
+    #         - "5000:5000/udp"
+    #         - "9600:9600"
+    #     environment:
+    #         LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    #     networks:
+    #         - docker_webstack
+    #     depends_on:
+    #         - elasticsearch
+    # kibana:
+    #     container_name: "kibana"
+    #     build:
+    #         context: kibana
+    #         args:
+    #             ELK_VERSION: 8.3.3
+    #     volumes:
+    #         - type: bind
+    #           source: ./etc/kibana/config/kibana.yml
+    #           target: /usr/share/kibana/config/kibana.yml
+    #           read_only: true
+    #     ports:
+    #         - "5601:5601"
+    #     networks:
+    #         - docker_webstack
+    #     depends_on:
+    #         - elasticsearch
+networks:
+    docker_webstack:
+        driver: bridge
