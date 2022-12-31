@@ -11,17 +11,39 @@ RUN apt-get update && \
     libjpeg-dev \
     libfreetype6-dev \
     zip \
+    gnupg2 \
+    libxml2-dev \
     && apt-get install -y locales \
     && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
     && locale-gen 
-    
+
 RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
     && docker-php-ext-configure mysqli --with-mysqli=mysqlnd \
     && docker-php-ext-install pdo_mysql \
-    && docker-php-ext-install mysqli  
+    && docker-php-ext-install mysqli \
+    && docker-php-ext-install bcmath  
 
-RUN docker-php-ext-configure pdo_dblib --with-libdir=lib/x86_64-linux-gnu && \
-    docker-php-ext-install pdo_dblib
+# RUN docker-php-ext-configure pdo_dblib --with-libdir=lib/x86_64-linux-gnu && \
+#     docker-php-ext-install pdo_dblib
+
+# Install the Microsoft ODBC driver for SQL Server
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN curl https://packages.microsoft.com/config/ubuntu/21.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+
+RUN apt-get update  \
+    && ACCEPT_EULA=Y apt-get install --yes --no-install-recommends msodbcsql17 unixodbc-dev \
+    && echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bash_profile \
+    && echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc 
+
+# Install pdo sqlsrv
+RUN pecl config-set php_ini /etc/php/7.4/fpm/php.ini \
+    && pecl install sqlsrv \
+    && pecl install pdo_sqlsrv \
+    && echo 'extension=sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini \
+    && echo 'extension=pdo_sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini 
+
+# Install soap
+RUN docker-php-ext-install soap
 
 # Zip
 RUN docker-php-ext-install zip
@@ -34,7 +56,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 RUN docker-php-ext-install gd
 
 # install xdebug
-RUN pecl install xdebug
+RUN pecl install xdebug-2.9.2
 RUN docker-php-ext-enable xdebug
 
 RUN echo "xdebug.remote_enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini

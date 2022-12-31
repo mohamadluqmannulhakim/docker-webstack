@@ -13,6 +13,7 @@ RUN apt-get update && \
     libfreetype6-dev \
     zip \
     gnupg2 \
+    libxml2-dev \
     && apt-get install -y locales \
     && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
     && locale-gen 
@@ -41,6 +42,9 @@ RUN pecl config-set php_ini /etc/php/7.4/fpm/php.ini \
     && pecl install pdo_sqlsrv \
     && echo 'extension=sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini \
     && echo 'extension=pdo_sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini 
+
+# Install soap
+RUN docker-php-ext-install soap
 
 # Zip
 RUN docker-php-ext-install zip
