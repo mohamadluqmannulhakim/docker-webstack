@@ -69,9 +69,9 @@ services:
             - "./projects/:/var/www/projects"
         networks:
             - docker_webstack
-    php7.fpm:
+    php7:
         build: php-stack-7-fpm
-        container_name: "php7.fpm"
+        container_name: "php7"
         restart: always
         volumes:
             - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
