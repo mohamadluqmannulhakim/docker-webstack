@@ -15,6 +15,7 @@ services:
     mssql:
         image: mcr.microsoft.com/mssql/server
         container_name: "mssql"
+        user: root
         restart: always
         ports:
             - "1433:1433"
@@ -50,6 +51,17 @@ services:
         restart: always
         volumes:
             - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
+            - "./projects/:/var/www/projects"
+        networks:
+            - docker_webstack
+    php8.1.fpm:
+        build: php-stack-8.1-fpm
+        container_name: "php8.1.fpm"
+        restart: always
+        volumes:
+            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
             - "./projects/:/var/www/projects"
         networks:
             - docker_webstack
@@ -65,9 +77,11 @@ services:
     mailhog:
         image: mailhog/mailhog
         container_name: "mailhog"
-        restart: always
+        restart: on-failure
         logging:
             driver: 'none' # disable saving logs
+        volumes:
+            - "./maildir/:/maildir"
         ports:
             - "1025:1025" # smtp server
             - "8025:8025" # web ui
