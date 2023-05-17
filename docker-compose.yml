@@ -26,6 +26,16 @@ services:
             - SA_PASSWORD=P@ssw0rd
         networks:
             - docker_webstack
+    mongodb:
+        image: mongo
+        container_name: "mongodb"
+        ports:
+            - '27017:27017'
+        environment:
+            - MONGODB_INITDB_ROOT_USERNAME=root
+            - MONGODB_INITDB_ROOT_PASSWORD=P@ssw0rd
+        volumes:
+            - "./db/mongodb:/data/db"
     nginx:
         image: nginx:latest
         container_name: "nginx"
