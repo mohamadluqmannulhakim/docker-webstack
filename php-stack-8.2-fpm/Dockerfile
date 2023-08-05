@@ -1,13 +1,7 @@
-FROM php:8.1-fpm
+FROM php:8.2.9RC1-fpm-bullseye
 
-LABEL maintainer="ashrul"
+LABEL maintainer="luqman"
 WORKDIR /var/www
-
-### ARG SECTION ###
-ARG POSTGRES_VERSION=12
-ARG NODE_VERSION=lts
-ARG WKHTML_VERSION=0.12.6.1-2
-ARG WKHTML_HOST_VERSION=bullseye_amd64
 
 ### ENV SECTION ###
 ENV TZ=Asia/Kuala_Lumpur
@@ -30,10 +24,7 @@ RUN apt-get update && \
     libfreetype6-dev \
     supervisor \
     gosu \
-    imagemagick \
-    libmagickwand-dev \
-    libmagickcore-dev \
-    imagemagick-doc \
+    systemctl \
     nano
 
 ## locales
@@ -68,14 +59,6 @@ RUN docker-php-ext-configure pcntl --enable-pcntl \
     && docker-php-ext-install \
     pcntl
 
-# Install MongoDB Client
-RUN apt-get install -y libcurl4-openssl-dev pkg-config libssl-dev
-RUN pecl uninstall mongodb
-RUN pecl install mongodb && docker-php-ext-enable mongodb
-
-# INSTALL IMAGICK
-RUN pecl install imagick && docker-php-ext-enable imagick
-
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
@@ -83,28 +66,3 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN apt-get -y autoremove
 RUN apt-get clean
-
-# COPY ./ /var/www/statsdigital
-# RUN mkdir /var/log/stacks
-
-# #FOR YII2 INIT
-# WORKDIR /var/wwwstatsdigital && php init
-
-# for laravel only
-# RUN chmod -R 775 storage bootstrap/cache
-# RUN chown -R root:www-data storage bootstrap/cache
-# RUN cp .env.production .env
-
-# RUN composer install --prefer-dist --no-dev
-# RUN composer install
-
-# enable if your project have submodule or stacks is used as submodule
-# RUN git submodule init && git submodule update
-
-# for laravel only
-# RUN composer require laravel/horizon league/flysystem-aws-s3-v3 "^3.0" && php artisan horizon:install
-# RUN php artisan optimize \
-# disable migrate on testing with docker compose if you are using local databases
-# && php artisan migrate --force
-
-# RUN cp -r /var/www/statsdigital/setup/nginx/nginx.conf /etc/nginx/conf.d/default.conf

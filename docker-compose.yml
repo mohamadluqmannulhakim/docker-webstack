@@ -31,11 +31,13 @@ services:
         container_name: "mongodb"
         ports:
             - '27017:27017'
+        volumes:
+            - "./db/mongodb:/data/db"
         environment:
             - MONGODB_INITDB_ROOT_USERNAME=root
             - MONGODB_INITDB_ROOT_PASSWORD=P@ssw0rd
-        volumes:
-            - "./db/mongodb:/data/db"
+        networks:
+            - docker_webstack
     nginx:
         image: nginx:latest
         container_name: "nginx"
@@ -52,9 +54,25 @@ services:
             - php7.fpm
             - mysql
             - mssql
-            - mailhog
+            # - mailhog
         networks:
             - docker_webstack
+    nodejs:
+        build: nodejs
+        container_name: "nodejs"
+        restart: on-failure
+        command: npm run dev
+        volumes:
+            - "./projects/:/var/www/projects"
+        networks:
+            - docker_webstack
+    tika:
+        image: logicalspark/docker-tikaserver
+        container_name: "tika"
+        ports:
+            - 9998:9998
+        volumes:
+            - "./projects/:/var/www/projects"
     php8.fpm:
         build: php-stack-8-fpm
         container_name: "php8.fpm"
@@ -75,6 +93,16 @@ services:
             - "./projects/:/var/www/projects"
         networks:
             - docker_webstack
+    php8.2.fpm:
+        build: php-stack-8.2-fpm
+        container_name: "php8.2.fpm"
+        restart: always
+        volumes:
+            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
+            - "./projects/:/var/www/projects"
+        networks:
+            - docker_webstack
     php7.fpm:
         build: php-stack-7-fpm
         container_name: "php7.fpm"
@@ -84,17 +112,42 @@ services:
             - "./projects/:/var/www/projects"
         networks:
             - docker_webstack
-    mailhog:
-        image: mailhog/mailhog
-        container_name: "mailhog"
-        restart: on-failure
-        logging:
-            driver: 'none' # disable saving logs
-        volumes:
-            - "./maildir/:/maildir"
+    elasticsearch:
+        build: elasticsearch
+        container_name: "elasticsearch"
         ports:
-            - "1025:1025" # smtp server
-            - "8025:8025" # web ui
+            - 9200:9200
+        volumes:
+            - "./projects/:/var/www/projects"
+        networks:
+            - docker_webstack
+    kibana:
+        image: docker.elastic.co/kibana/kibana:6.3.2
+        container_name: "kibana"
+        ports:
+            - "5601:5601"
+        networks:
+            - docker_webstack
+    # mailhog:
+    #     image: mailhog/mailhog
+    #     container_name: "mailhog"
+    #     restart: on-failure
+    #     logging:
+    #         driver: 'none' # disable saving logs
+    #     volumes:
+    #         - "./maildir/:/maildir"
+    #     ports:
+    #         - "1025:1025" # smtp server
+    #         - "8025:8025" # web ui
+    #     networks:
+    #         - docker_webstack
+    mailpit:
+        image: axllent/mailpit
+        container_name: "mailpit"
+        restart: unless-stopped
+        ports:
+            - 8025:8025
+            - 1025:1025
         networks:
             - docker_webstack
     redis:
