@@ -1,5 +1,4 @@
-FROM php:7.4-fpm
-MAINTAINER Muhamad Hanafiah Yahya <ibnuyahya@gmail.com>
+FROM php:7.3-fpm
 
 RUN apt-get update && \
     apt-get install -y \
@@ -23,25 +22,6 @@ RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
     && docker-php-ext-install mysqli \
     && docker-php-ext-install bcmath  
 
-# RUN docker-php-ext-configure pdo_dblib --with-libdir=lib/x86_64-linux-gnu && \
-#     docker-php-ext-install pdo_dblib
-
-# Install the Microsoft ODBC driver for SQL Server
-# RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-# RUN curl https://packages.microsoft.com/config/ubuntu/21.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
-
-# RUN apt-get update  \
-#     && ACCEPT_EULA=Y apt-get install --yes --no-install-recommends msodbcsql17 unixodbc-dev \
-#     && echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bash_profile \
-#     && echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc 
-
-# Install pdo sqlsrv
-# RUN pecl config-set php_ini /etc/php/7.4/fpm/php.ini \
-#     && pecl install sqlsrv \
-#     && pecl install pdo_sqlsrv \
-#     && echo 'extension=sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini \
-#     && echo 'extension=pdo_sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini 
-
 # Install soap
 RUN docker-php-ext-install soap
 
@@ -52,7 +32,8 @@ RUN docker-php-ext-install exif && docker-php-ext-enable exif
 RUN docker-php-ext-install zip
 
 # PHP EXT GD
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+RUN docker-php-ext-configure gd
+#  --with-freetype --with-jpeg
 RUN docker-php-ext-install gd
 
 # PHP EXT Redis
@@ -78,10 +59,6 @@ RUN apt-get -y update \
 
 # remove list
 RUN rm -rf /var/lib/apt/lists/*
-
-# GD
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg 
-RUN docker-php-ext-install gd
 
 # install xdebug
 RUN pecl install xdebug-2.9.2

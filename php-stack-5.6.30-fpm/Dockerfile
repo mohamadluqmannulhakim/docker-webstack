@@ -1,4 +1,12 @@
 FROM php:5.6.30-fpm
+
+# debian stretch moved to archive.debian.org on 2023-03-27
+RUN export DEBIAN_FRONTEND="noninteractive" && \
+    echo "deb http://archive.debian.org/debian/ stretch main non-free contrib" > /etc/apt/sources.list && \
+    echo "deb http://archive.debian.org/debian-security/ stretch/updates main non-free contrib" >> /etc/apt/sources.list && \
+    apt-get update -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true -o APT::Get::AllowUnauthenticated=true && \
+    apt-get install -y --no-install-recommends -o APT::Get::AllowUnauthenticated=true debian-archive-keyring
+    
 RUN apt-get update && apt-get install -y \
     libssl-dev \
     libssl-doc \
@@ -8,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libmagickwand-dev \
     libmcrypt-dev \
-    libpng12-dev \
+    # libpng12-dev \
     libmemcached-dev \
     zlib1g-dev \
     && docker-php-ext-install -j$(nproc) bz2 iconv mcrypt mbstring pdo_mysql mysql mysqli pgsql pdo_pgsql zip \

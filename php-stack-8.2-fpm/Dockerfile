@@ -27,6 +27,8 @@ RUN apt-get update && \
     systemctl \
     nano
 
+RUN docker-php-ext-install bcmath  
+
 ## locales
 RUN apt-get install -y \
     locales \
@@ -58,6 +60,13 @@ RUN pecl install -o -f redis \
 RUN docker-php-ext-configure pcntl --enable-pcntl \
     && docker-php-ext-install \
     pcntl
+
+# PHP EXT intl
+RUN apt-get -y update \
+    && apt-get install -y zlib1g-dev libicu-dev g++\ 
+    && docker-php-ext-configure intl --enable-intl \
+    && docker-php-ext-install \
+    intl
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer

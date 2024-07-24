@@ -30,11 +30,18 @@ RUN apt-get update && \
     libfreetype6-dev \
     supervisor \
     gosu \
-    imagemagick \
-    libmagickwand-dev \
-    libmagickcore-dev \
-    imagemagick-doc \
     nano
+
+RUN docker-php-ext-install bcmath  
+
+RUN apt-get update && apt-get install -y libmagickwand-dev --no-install-recommends
+
+RUN apt-get update && \
+    apt-get install -y \
+    libmagickcore-dev \
+    libmagickwand-dev
+
+RUN apt-get clean
 
 ## locales
 RUN apt-get install -y \
@@ -50,6 +57,25 @@ RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
 
 # PHP EXT File exif
 RUN docker-php-ext-install exif && docker-php-ext-enable exif
+
+# Install the Microsoft ODBC driver for SQL Server
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list
+
+RUN apt-get update  \
+    && ACCEPT_EULA=Y apt-get install --yes --no-install-recommends msodbcsql17 unixodbc-dev \
+    && echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bash_profile \
+    && echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc 
+
+# Install pdo sqlsrv
+RUN pecl config-set php_ini /usr/local/etc/php/conf.d/php.ini \
+    && pecl install sqlsrv \
+    && pecl install pdo_sqlsrv \
+    && echo 'extension=sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini \
+    && echo 'extension=pdo_sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini 
+
+# Install soap
+RUN docker-php-ext-install soap
 
 # PHP EXT Zip
 RUN docker-php-ext-install zip
