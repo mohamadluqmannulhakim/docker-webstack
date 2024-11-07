@@ -121,6 +121,16 @@ services:
             - "./projects/:/var/www/projects"
         networks:
             - docker_webstack
+    php8.3.fpm:
+        build: php-stack-8.3-fpm
+        container_name: "php8.3.fpm"
+        restart: always
+        volumes:
+            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
+            - "./projects/:/var/www/projects"
+        networks:
+            - docker_webstack
     php7.fpm:
         build: php-stack-7-fpm
         container_name: "php7.fpm"
