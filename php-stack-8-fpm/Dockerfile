@@ -38,8 +38,8 @@ RUN apt-get update  \
 
 # Install pdo sqlsrv
 RUN pecl config-set php_ini /usr/local/etc/php/conf.d/php.ini \
-    && pecl install sqlsrv \
-    && pecl install pdo_sqlsrv \
+    && pecl install sqlsrv-5.11.1 \
+    && pecl install pdo_sqlsrv-5.11.1 \
     && echo 'extension=sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini \
     && echo 'extension=pdo_sqlsrv.so' >> /usr/local/etc/php/conf.d/sqlsrv.ini 
 

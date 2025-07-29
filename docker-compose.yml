@@ -1,4 +1,4 @@
-version: '3.7'
+# version: '3.7'
 services:
     mysql:
         image: mysql:8.0.36
@@ -180,6 +180,20 @@ services:
     #         - "8025:8025" # web ui
     #     networks:
     #         - docker_webstack
+    flask-app:
+        container_name: 'fingerprint-backup-api'
+        image: 'flaskapp'
+        #network_mode: 'host'
+        volumes:
+            - "./projects/:/var/www/projects"
+        ports:
+            - "5000:5000"
+            # - "5001:5001"
+        environment:
+            - FLASK_ENV=development
+        restart: always
+        networks:
+            - docker_webstack
     mailpit:
         image: axllent/mailpit
         container_name: "mailpit"

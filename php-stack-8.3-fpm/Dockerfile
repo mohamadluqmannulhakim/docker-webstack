@@ -47,6 +47,12 @@ RUN docker-php-ext-install exif && docker-php-ext-enable exif
 # PHP EXT Zip
 RUN docker-php-ext-install zip
 
+# PHP EXT Sockets
+RUN docker-php-ext-install sockets
+
+# PHP EXT SOAP
+RUN docker-php-ext-install soap
+
 # PHP EXT GD
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 RUN docker-php-ext-install gd

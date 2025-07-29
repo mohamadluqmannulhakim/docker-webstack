@@ -1,0 +1,86 @@
+# For more information: https://laravel.com/docs/sail
+version: '3'
+services:
+  php:
+    build:
+      context: .
+      dockerfile: ./setup/php/Dockerfile
+    ports:
+      - "8080:80"
+      # - "${FORWARD_HTTPS_PORT:-443}:443"
+    environment:
+      CHOKIDAR_USEPOLLING: 'true'
+    volumes:
+      - './:/var/www/statsdigital'
+    restart: always
+    networks:
+      - statsdigital-net
+    depends_on:
+      - mongo
+  mongo:
+    image: mongo
+    container_name: "statsdigital--mongo"
+    restart: always
+    # volumes:
+    #     - "./mongo:/data/db"
+    ports:
+      - "27017:27017"
+    # environment:
+    #     - MONGO_INITDB_ROOT_USERNAME=root
+    #     - MONGO_INITDB_ROOT_PASSWORD=P@ssw0rd
+    command: --storageEngine wiredTiger
+    networks:
+      - statsdigital-net
+  elasticsearch:
+    build: ./setup/elastic
+    container_name: "statsdigital--elasticsearch"
+    ports:
+      - 9200:9200
+    networks:
+      - statsdigital-net
+  tika:
+    image: logicalspark/docker-tikaserver
+    container_name: "statsdigital--tika"
+    ports:
+      - 9998:9998
+    networks:
+      - statsdigital-net
+  cache:
+    container_name: 'statsdigital--redis'
+    image: 'redis:alpine'
+    restart: always
+    environment:
+      REDIS_PASSWORD: '${REDIS_PASSWORD:-password}'
+    command: 'redis-server --requirepass "password"'
+    # volumes:
+    #     - 'reka-redis:/data'
+    networks:
+      - statsdigital-net
+  mail:
+    container_name: 'statsdigital--mailhog'
+    image: 'mailhog/mailhog:latest'
+    restart: always
+    ports:
+      - 1025:1025
+      - 8025:8025
+    networks:
+      - statsdigital-net
+  soketi:
+    container_name: 'statsdigital--soketi'
+    image: 'quay.io/soketi/soketi:latest-16-debian'
+    environment:
+      DEBUG: '1'
+      METRICS_SERVER_PORT: '9601'
+    ports:
+      - '${SOKETI_PORT:-6001}:6001'
+      - '${SOKETI_METRICS_SERVER_PORT:-9601}:9601'
+    networks:
+      - statsdigital-net
+networks:
+  statsdigital-net:
+    driver: bridge
+volumes:
+  statsdigital-db:
+    driver: local
+  statsdigital-redis:
+    driver: local
