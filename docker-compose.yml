@@ -1,274 +1,516 @@
-# version: '3.7'
+x-php-common: &php-common
+  restart: always
+  volumes:
+    # PHP configuration files
+    - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+    # Web projects
+    - "./projects:/var/www/projects"
+    # Logs
+    - "./logs/php:/usr/local/var/log"
+    # Sessions and temp files
+    - php_sessions:/tmp/sessions
+    - php_uploads:/tmp/uploads
+  networks:
+    - webstack
+  environment:
+    # Docker-specific PHP settings
+    - PHP_INI_SCAN_DIR=/usr/local/etc/php/conf.d:/usr/local/etc/php/custom.d
+    - PHP_FPM_LISTEN=9000
+    # Timezone configuration
+    - TZ=${TIMEZONE:-Asia/Kuala_Lumpur}
+    # All PHP performance settings are now handled by /usr/local/etc/php/conf.d/00-general.ini
+    # This eliminates conflicts and provides single source of truth
+  healthcheck:
+    test: ["CMD", "php", "-v"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 60s
+  deploy:
+    resources:
+      limits:
+        memory: 4068M
+        cpus: "4.0"
+      reservations:
+        memory: 256M
+        cpus: "0.25"
+
 services:
-    mysql:
-        image: mysql:8.0.36
-        container_name: "mysql"
-        restart: always
-        environment:
-            MYSQL_ROOT_PASSWORD: root123
-        ports:
-            - "3306:3306"
-        volumes:
-            - ./db/mysql:/var/lib/mysql
-            - ./etc/mysql:/etc/mysql/conf.d
-        networks:
-            - docker_webstack
-    # mysql5.6:
-    #     image: mysql:5.6
-    #     container_name: "mysql5.6"
-    #     restart: always
-    #     environment:
-    #         MYSQL_ROOT_PASSWORD: root123
-    #     ports:
-    #         - "3305:3306"
-    #     volumes:
-    #         - ./db/mysql5.6:/var/lib/mysql
-    #         - ./etc/mysql5.6:/etc/mysql/conf.d
-    #     networks:
-    #         - docker_webstack
-    mssql:
-        image: mcr.microsoft.com/mssql/server
-        container_name: "mssql"
-        user: root
-        restart: always
-        ports:
-            - "1433:1433"
-        volumes:
-            - "./db/mssql:/var/opt/mssql/data"
-        environment:
-            - ACCEPT_EULA=Y
-            - SA_PASSWORD=P@ssw0rd
-            - MSSQL_AGENT_ENABLED=True
-        networks:
-            - docker_webstack
-    mongodb:
-        image: mongo
-        container_name: "mongodb"
-        ports:
-            - '27017:27017'
-        volumes:
-            - "./db/mongodb:/data/db"
-        environment:
-            - MONGODB_INITDB_ROOT_USERNAME=root
-            - MONGODB_INITDB_ROOT_PASSWORD=P@ssw0rd
-        networks:
-            - docker_webstack
-    nginx:
-        image: nginx:latest
-        container_name: "nginx"
-        ports:
-            - "80:80"
-            - "443:443"
-            - "5173:5173"
-        restart: always
-        volumes:
-            - "./etc/nginx/default.conf:/etc/nginx/conf.d/default.conf"
-            - "./etc/ssl:/etc/ssl"
-            - "./projects/:/var/www/projects"
-        depends_on:
-            - php8.fpm
-            - mysql
-            - mssql
-            # - mailhog
-        networks:
-            - docker_webstack
-    # nodejs:
-    #     build: nodejs
-    #     container_name: "nodejs"
-    #     restart: on-failure
-    #     command: npm run dev
-    #     volumes:
-    #         - "./projects/:/var/www/projects"
-    #     networks:
-    #         - docker_webstack
-    # tika:
-    #     image: logicalspark/docker-tikaserver
-    #     container_name: "tika"
-    #     ports:
-    #         - 9998:9998
-    #     volumes:
-    #         - "./projects/:/var/www/projects"
-    php8.fpm:
-        build: php-stack-8-fpm
-        container_name: "php8.fpm"
-        restart: always
-        volumes:
-            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
-            - "./projects/:/var/www/projects"
-        networks:
-            - docker_webstack
-    php8.1.fpm:
-        build: php-stack-8.1-fpm
-        container_name: "php8.1.fpm"
-        restart: always
-        volumes:
-            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
-            - "./projects/:/var/www/projects"
-        networks:
-            - docker_webstack
-    php8.2.fpm:
-        build: php-stack-8.2-fpm
-        container_name: "php8.2.fpm"
-        ports:
-            # untuk websocket
-            - "8090:8090"
-        restart: always
-        volumes:
-            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
-            - "./projects/:/var/www/projects"
-        networks:
-            - docker_webstack
-    php8.3.fpm:
-        build: php-stack-8.3-fpm
-        container_name: "php8.3.fpm"
-        restart: always
-        volumes:
-            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-            # - "./etc/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf"
-            - "./projects/:/var/www/projects"
-        networks:
-            - docker_webstack
-    php7.fpm:
-        build: php-stack-7-fpm
-        container_name: "php7.fpm"
-        restart: always
-        volumes:
-            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-            - "./projects/:/var/www/projects"
-        networks:
-            - docker_webstack
-    php7.1.fpm:
-        build: php-stack-7.1-fpm
-        container_name: "php7.1.fpm"
-        restart: always
-        volumes:
-            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-            - "./projects/:/var/www/projects"
-        networks:
-            - docker_webstack
-    php5.6.fpm:
-        build: php-stack-5.6.30-fpm
-        container_name: "php5.6.fpm"
-        restart: always
-        volumes:
-            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-            - "./projects/:/var/www/projects"
-        networks:
-            - docker_webstack
-    # php7.3.fpm:
-    #     build: php-stack-7.3-fpm
-    #     container_name: "php7.3.fpm"
-    #     restart: always
-    #     volumes:
-    #         - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-    #         - "./projects/:/var/www/projects"
-    #     networks:
-    #         - docker_webstack
-    # mailhog:
-    #     image: mailhog/mailhog
-    #     container_name: "mailhog"
-    #     restart: on-failure
-    #     logging:
-    #         driver: 'none' # disable saving logs
-    #     volumes:
-    #         - "./maildir/:/maildir"
-    #     ports:
-    #         - "1025:1025" # smtp server
-    #         - "8025:8025" # web ui
-    #     networks:
-    #         - docker_webstack
-    flask-app:
-        container_name: 'fingerprint-backup-api'
-        image: 'flaskapp'
-        #network_mode: 'host'
-        volumes:
-            - "./projects/:/var/www/projects"
-        ports:
-            - "5000:5000"
-            # - "5001:5001"
-        environment:
-            - FLASK_ENV=development
-        restart: always
-        networks:
-            - docker_webstack
-    mailpit:
-        image: axllent/mailpit
-        container_name: "mailpit"
-        restart: unless-stopped
-        ports:
-            - 8025:8025
-            - 1025:1025
-        networks:
-            - docker_webstack
-    redis:
-        image: redis
-        container_name: "redis"
-        restart: always
-        volumes:
-            - ./db/redis:/data/db
-        ports:
-            - "6379:6379"
-        networks:
-            - docker_webstack
-    # onlyoffice-documentserver:
-    #     build:
-    #         context: onlyoffice
-    #     container_name: onlyoffice-documentserver
-    #     depends_on:
-    #         - onlyoffice-postgresql
-    #         - onlyoffice-rabbitmq
-    #     environment:
-    #         - DB_TYPE=postgres
-    #         - DB_HOST=onlyoffice-postgresql
-    #         - DB_PORT=5432
-    #         - DB_NAME=onlyoffice
-    #         - DB_USER=onlyoffice
-    #         - AMQP_URI=amqp://guest:guest@onlyoffice-rabbitmq
-    #         # Uncomment strings below to enable the JSON Web Token validation.
-    #         - JWT_ENABLED=true
-    #         - JWT_SECRET=secret
-    #         - JWT_HEADER=Authorization
-    #         - JWT_IN_BODY=true
-    #     ports:
-    #         - '81:80'
-    #         - '444:443'
-    #     stdin_open: true
-    #     restart: always
-    #     stop_grace_period: 60s
-    #     volumes:
-    #         - /var/www/onlyoffice/Data
-    #         - /var/log/onlyoffice
-    #         - /var/lib/onlyoffice/documentserver/App_Data/cache/files
-    #         - /var/www/onlyoffice/documentserver-example/public/files
-    #         - /usr/share/fonts
-    #         - "./projects/:/var/www/projects"
-    #     networks:
-    #         - docker_webstack
-    # onlyoffice-rabbitmq:
-    #     container_name: onlyoffice-rabbitmq
-    #     image: rabbitmq
-    #     restart: always
-    #     expose:
-    #         - '5672'
-    #     networks:
-    #         - docker_webstack
-    # onlyoffice-postgresql:
-    #     container_name: onlyoffice-postgresql
-    #     image: postgres:12
-    #     environment:
-    #         - POSTGRES_DB=onlyoffice
-    #         - POSTGRES_USER=onlyoffice
-    #         - POSTGRES_HOST_AUTH_METHOD=trust
-    #     restart: always
-    #     expose:
-    #         - '5432'
-    #     volumes:
-    #         - ./db/postgresql:/var/lib/postgresql
-    #     networks:
-    #         - docker_webstack
+  # Database Service - Master
+  database:
+    image: mariadb:latest
+    container_name: "webstack-mariadb-master"
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - "./db/mariadb:/var/lib/mysql"
+      - "./etc/mariadb:/etc/mysql/conf.d"
+      - "./logs/mariadb:/var/log/mysql"
+      - mariadb_temp:/tmp
+    environment:
+      # Database initialization (Docker-specific)
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-12345}
+      MYSQL_DATABASE: ${DB_NAME:-webstack}
+      MYSQL_USER: ${DB_USER:-webstack}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-webstack}
+      MARIADB_AUTO_UPGRADE: 1
+      # Replication configuration (Docker-specific)
+      MYSQL_REPLICATION_MODE: master
+      MYSQL_REPLICATION_USER: ${DB_REPLICATION_USER:-replicator}
+      MYSQL_REPLICATION_PASSWORD: ${DB_REPLICATION_PASSWORD:-repl123}
+      # Timezone configuration
+      TZ: ${TIMEZONE:-Asia/Kuala_Lumpur}
+      # Performance settings are now handled by /etc/mysql/conf.d/my.cnf
+      # This eliminates conflicts and provides single source of truth
+    networks:
+      - webstack
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mariadb",
+          "-u",
+          "root",
+          "-p${DB_ROOT_PASSWORD:-12345}",
+          "-e",
+          "SELECT 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    # Configuration is now handled entirely by /etc/mysql/conf.d/my.cnf
+    # This provides better consistency and easier management
+
+  # Database Service - Slave (Read Replica)
+  database-slave:
+    image: mariadb:latest
+    container_name: "webstack-mariadb-slave"
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - "./db/mariadb-slave:/var/lib/mysql"
+      - "./etc/mariadb-slave:/etc/mysql/conf.d"
+      - "./logs/mariadb-slave:/var/log/mysql"
+      - mariadb_slave_temp:/tmp
+    environment:
+      # Database initialization (Docker-specific)
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-12345}
+      MYSQL_DATABASE: ${DB_NAME:-webstack}
+      MYSQL_USER: ${DB_USER:-webstack}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-webstack123}
+      MARIADB_AUTO_UPGRADE: 1
+      # Timezone configuration
+      TZ: ${TIMEZONE:-Asia/Kuala_Lumpur}
+      # Performance settings are now handled by /etc/mysql/conf.d/my.cnf
+      # This eliminates conflicts and provides single source of truth
+    networks:
+      - webstack
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mariadb",
+          "-u",
+          "root",
+          "-p${DB_ROOT_PASSWORD:-12345}",
+          "-e",
+          "SELECT 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    # Configuration is now handled entirely by /etc/mysql/conf.d/my.cnf
+    # This provides better consistency and easier management
+
+  # Web Server Service
+  webserver:
+    image: nginx:latest
+    container_name: "webstack-nginx"
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    restart: always
+    volumes:
+      # Nginx configuration files
+      - "./etc/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
+      - "./etc/nginx/conf.d:/etc/nginx/conf.d:ro"
+      - "./etc/nginx/fastcgi_params:/etc/nginx/fastcgi_params:ro"
+      - "./etc/nginx/mime.types:/etc/nginx/mime.types:ro"
+      # SSL certificates
+      - "./etc/ssl:/etc/ssl/private:ro"
+      # Web projects and static files (includes project-specific nginx.conf)
+      - "./projects:/var/www/projects:ro"
+      # Logs
+      - "./logs/nginx:/var/log/nginx"
+      # Cache and temp directories
+      - nginx_cache:/var/cache/nginx
+      - nginx_temp:/tmp/nginx
+      - nginx_body_temp:/var/cache/nginx/client_temp
+      - nginx_proxy_temp:/var/cache/nginx/proxy_temp
+      - nginx_fastcgi_temp:/var/cache/nginx/fastcgi_temp
+    depends_on:
+      database:
+        condition: service_healthy
+      php56:
+        condition: service_healthy
+      # php70:
+      #   condition: service_healthy
+      # php71:
+      #   condition: service_healthy
+      # php72:
+      #   condition: service_healthy
+      # php73:
+      #   condition: service_healthy
+      # php74:
+      #   condition: service_healthy
+      # php80:
+      #   condition: service_healthy
+      # php81:
+      #   condition: service_healthy
+      php82:
+        condition: service_healthy
+      php83:
+        condition: service_healthy
+      php84:
+        condition: service_healthy
+    networks:
+      - webstack
+    environment:
+      # Timezone configuration
+      - TZ=${TIMEZONE:-Asia/Kuala_Lumpur}
+      # All performance settings are now handled by /etc/nginx/nginx.conf
+      # This eliminates conflicts and provides single source of truth
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+
+  # PHP 5.6 Service
+  php56:
+    <<: *php-common
+    build:
+      context: ./php-stack-5.6.30-fpm
+      dockerfile: Dockerfile
+    container_name: "webstack-php56"
+    volumes:
+      # PHP configuration files
+      - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+      - "./etc/php/5.6:/usr/local/etc/php/conf.d/99-version:ro"
+      - "./etc/php/5.6/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+      # Web projects
+      - "./projects:/var/www/projects"
+      # Logs
+      - "./logs/php56:/usr/local/var/log"
+
+      # Sessions and temp files
+      - php56_sessions:/tmp/sessions
+      - php56_uploads:/tmp/uploads
+    environment:
+      - PHP_VERSION=5.6
+
+  # # PHP 7.0 Service
+  # php70:
+  #   <<: *php-common
+  #   build:
+  #     context: ./php-stack-7.0-fpm
+  #     dockerfile: Dockerfile
+  #   container_name: "webstack-php70"
+  #   volumes:
+  #     # PHP configuration files
+  #     - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+  #     - "./etc/php/7.0:/usr/local/etc/php/conf.d/99-version:ro"
+  #     - "./etc/php/7.0/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+  #     # Web projects
+  #     - "./projects:/var/www/projects"
+  #     # Logs
+  #     - "./logs/php70:/usr/local/var/log"
+  #     # Sessions and temp files
+  #     - php70_sessions:/tmp/sessions
+  #     - php70_uploads:/tmp/uploads
+  #   environment:
+  #     - PHP_VERSION=7.0
+
+  # # PHP 7.1 Service
+  # php71:
+  #   <<: *php-common
+  #   build:
+  #     context: ./php-stack-7.1-fpm
+  #     dockerfile: Dockerfile
+  #   container_name: "webstack-php71"
+  #   volumes:
+  #     # PHP configuration files
+  #     - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+  #     - "./etc/php/7.1:/usr/local/etc/php/conf.d/99-version:ro"
+  #     - "./etc/php/7.1/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+  #     # Web projects
+  #     - "./projects:/var/www/projects"
+  #     # Logs
+  #     - "./logs/php71:/usr/local/var/log"
+  #     # Sessions and temp files
+  #     - php71_sessions:/tmp/sessions
+  #     - php71_uploads:/tmp/uploads
+  #   environment:
+  #     - PHP_VERSION=7.1
+
+  # # PHP 7.2 Service
+  # php72:
+  #   <<: *php-common
+  #   build:
+  #     context: ./php-stack-7.2-fpm
+  #     dockerfile: Dockerfile
+  #   container_name: "webstack-php72"
+  #   volumes:
+  #     # PHP configuration files
+  #     - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+  #     - "./etc/php/7.2:/usr/local/etc/php/conf.d/99-version:ro"
+  #     - "./etc/php/7.2/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+  #     # Web projects
+  #     - "./projects:/var/www/projects"
+  #     # Logs
+  #     - "./logs/php72:/usr/local/var/log"
+
+  #     # Sessions and temp files
+  #     - php72_sessions:/tmp/sessions
+  #     - php72_uploads:/tmp/uploads
+  #   environment:
+  #     - PHP_VERSION=7.2
+
+  # # PHP 7.3 Service
+  # php73:
+  #   <<: *php-common
+  #   build:
+  #     context: ./php-stack-7.3-fpm
+  #     dockerfile: Dockerfile
+  #   container_name: "webstack-php73"
+  #   volumes:
+  #     # PHP configuration files
+  #     - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+  #     - "./etc/php/7.3:/usr/local/etc/php/conf.d/99-version:ro"
+  #     - "./etc/php/7.3/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+  #     # Web projects
+  #     - "./projects:/var/www/projects"
+  #     # Logs
+  #     - "./logs/php73:/usr/local/var/log"
+  #     # Sessions and temp files
+  #     - php73_sessions:/tmp/sessions
+  #     - php73_uploads:/tmp/uploads
+  #   environment:
+  #     - PHP_VERSION=7.3
+
+  # # PHP 7.4 Service
+  # php74:
+  #   <<: *php-common
+  #   build:
+  #     context: ./php-stack-7.4-fpm
+  #     dockerfile: Dockerfile
+  #   container_name: "webstack-php74"
+  #   volumes:
+  #     # PHP configuration files
+  #     - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+  #     - "./etc/php/7.4:/usr/local/etc/php/conf.d/99-version:ro"
+  #     - "./etc/php/7.4/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+  #     # Web projects
+  #     - "./projects:/var/www/projects"
+  #     # Logs
+  #     - "./logs/php74:/usr/local/var/log"
+  #     # Sessions and temp files
+  #     - php74_sessions:/tmp/sessions
+  #     - php74_uploads:/tmp/uploads
+  #   environment:
+  #     - PHP_VERSION=7.4
+
+  # # PHP 8.0 Service
+  # php80:
+  #   <<: *php-common
+  #   build:
+  #     context: ./php-stack-8.0-fpm
+  #     dockerfile: Dockerfile
+  #   container_name: "webstack-php80"
+  #   volumes:
+  #     # PHP configuration files
+  #     - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+  #     - "./etc/php/8.0:/usr/local/etc/php/conf.d/99-version:ro"
+  #     - "./etc/php/8.0/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+  #     # Web projects
+  #     - "./projects:/var/www/projects"
+  #     # Logs
+  #     - "./logs/php80:/usr/local/var/log"
+  #     # Sessions and temp files
+  #     - php80_sessions:/tmp/sessions
+  #     - php80_uploads:/tmp/uploads
+  #   environment:
+  #     - PHP_VERSION=8.0
+
+  # PHP 8.1 Service
+  php81:
+    <<: *php-common
+    build:
+      context: ./php-stack-8.1-fpm
+      dockerfile: Dockerfile
+    container_name: "webstack-php81"
+    volumes:
+      # PHP configuration files
+      - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+      - "./etc/php/8.1:/usr/local/etc/php/conf.d/99-version:ro"
+      - "./etc/php/8.1/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+      # Web projects
+      - "./projects:/var/www/projects"
+      # Logs
+      - "./logs/php81:/usr/local/var/log"
+      # Sessions and temp files
+      - php81_sessions:/tmp/sessions
+      - php81_uploads:/tmp/uploads
+    environment:
+      - PHP_VERSION=8.1
+
+  # # PHP 8.2 Service
+  php82:
+    <<: *php-common
+    build:
+      context: ./php-stack-8.2-fpm
+      dockerfile: Dockerfile
+    container_name: "webstack-php82"
+    volumes:
+      # PHP configuration files
+      - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+      - "./etc/php/8.2:/usr/local/etc/php/conf.d/99-version:ro"
+      - "./etc/php/8.2/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+      # Web projects
+      - "./projects:/var/www/projects"
+      # Logs
+      - "./logs/php82:/usr/local/var/log"
+      # Sessions and temp files
+      - php82_sessions:/tmp/sessions
+      - php82_uploads:/tmp/uploads
+    environment:
+      - PHP_VERSION=8.2
+
+  # PHP 8.3 Service
+  php83:
+    <<: *php-common
+    build:
+      context: ./php-stack-8.3-fpm
+      dockerfile: Dockerfile
+    container_name: "webstack-php83"
+    volumes:
+      # PHP configuration files
+      - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+      - "./etc/php/8.3:/usr/local/etc/php/conf.d/99-version:ro"
+      - "./etc/php/8.3/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+      # Web projects
+      - "./projects:/var/www/projects"
+      # Logs
+      - "./logs/php83:/usr/local/var/log"
+      # Sessions and temp files
+      - php83_sessions:/tmp/sessions
+      - php83_uploads:/tmp/uploads
+    environment:
+      - PHP_VERSION=8.3
+
+  # PHP 8.4 Service
+  php84:
+    <<: *php-common
+    build:
+      context: ./php-stack-8.4-fpm
+      dockerfile: Dockerfile
+    container_name: "webstack-php84"
+    volumes:
+      # PHP configuration files
+      - "./etc/php/php.ini:/usr/local/etc/php/conf.d/00-general.ini:ro"
+      - "./etc/php/8.4:/usr/local/etc/php/conf.d/99-version:ro"
+      - "./etc/php/8.4/php-fpm.d:/usr/local/etc/php-fpm.d:ro"
+      # Web projects
+      - "./projects:/var/www/projects"
+      # Logs
+      - "./logs/php84:/usr/local/var/log"
+      # Sessions and temp files
+      - php84_sessions:/tmp/sessions
+      - php84_uploads:/tmp/uploads
+    environment:
+      - PHP_VERSION=8.4
+
+  # Redis Service (optional)
+  cache:
+    image: redis:alpine
+    container_name: "webstack-redis"
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - "./db/redis:/data"
+      - "./etc/redis/redis.conf:/usr/local/etc/redis/redis.conf"
+    environment:
+      - TZ=${TIMEZONE:-Asia/Kuala_Lumpur}
+    networks:
+      - webstack
+    command: redis-server /usr/local/etc/redis/redis.conf
+
 networks:
-    docker_webstack:
-        driver: bridge
+  webstack:
+    driver: bridge
+    name: webstack-network
+
+volumes:
+  database_data:
+  cache_data:
+  mariadb_temp:
+  mariadb_slave_temp:
+  nginx_cache:
+  nginx_temp:
+  nginx_body_temp:
+  nginx_proxy_temp:
+  nginx_fastcgi_temp:
+  php_sessions:
+  php_uploads:
+  php56_sessions:
+  php56_uploads:
+  php70_sessions:
+  php70_uploads:
+  php71_sessions:
+  php71_uploads:
+  php72_sessions:
+  php72_uploads:
+  php73_sessions:
+  php73_uploads:
+  php74_sessions:
+  php74_uploads:
+  php80_sessions:
+  php80_uploads:
+  php81_sessions:
+  php81_uploads:
+  php82_sessions:
+  php82_uploads:
+  php83_sessions:
+  php83_uploads:
+  php84_sessions:
+  php84_uploads:

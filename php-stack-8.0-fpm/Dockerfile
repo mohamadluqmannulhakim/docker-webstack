@@ -1,6 +1,6 @@
-FROM php:8.2-fpm
+FROM php:8.0-fpm
 LABEL maintainer="docker-webstack"
-LABEL description="PHP 8.2 FPM optimized for Laravel with comprehensive extensions"
+LABEL description="PHP 8.0 FPM optimized for Laravel with comprehensive extensions"
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -39,8 +39,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 RUN pecl install redis-5.3.7 \
     && docker-php-ext-enable redis
 
-# Install Xdebug for PHP 8.2
-RUN pecl install xdebug-3.2.2 \
+# Install Xdebug for PHP 8.0
+RUN pecl install xdebug-3.1.6 \
     && docker-php-ext-enable xdebug
 
 # Install Composer

@@ -1,83 +1,66 @@
 FROM php:8.3-fpm
+LABEL maintainer="docker-webstack"
+LABEL description="PHP 8.3 FPM optimized for Laravel with comprehensive extensions"
 
-LABEL maintainer="luqman"
-WORKDIR /var/www
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    LOCALTIME=Asia/Kuala_Lumpur \
+    PHPFPM__access.format='"%R - %u [%t] \"%m %r\" %s %l %Q %f"'
 
-### ENV SECTION ###
-ENV TZ=Asia/Kuala_Lumpur
-ENV PHPFPM__access.format '"%R - %u [%t] \"%m %r\" %s %l %Q %f"'
-
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN apt-get update && \
-    apt-get install -y \
-    # php php-fpm \
-    wget \
-    nano \
-    gnupg2 \
-    git \
-    libzip-dev \
+# Install system dependencies for Laravel
+RUN apt-get update && apt-get install -y \
+    curl \
     libpng-dev \
-    libjpeg-dev \
-    zip \
-    systemctl \
+    libonig-dev \
+    libxml2-dev \
     libfreetype6-dev \
-    supervisor \
-    gosu \
-    systemctl \
-    nano
+    libjpeg62-turbo-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install bcmath  
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    opcache \
+    mysqli
 
-## locales
-RUN apt-get install -y \
-    locales \
-    && locale-gen \
-    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+# Install Redis extension
+RUN pecl install redis-6.0.2 \
+    && docker-php-ext-enable redis
 
-## PHP EXT mysql
-RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
-    && docker-php-ext-configure mysqli --with-mysqli=mysqlnd \
-    && docker-php-ext-install pdo_mysql \
-    && docker-php-ext-install mysqli
-
-# PHP EXT File exif
-RUN docker-php-ext-install exif && docker-php-ext-enable exif
-
-# PHP EXT Zip
-RUN docker-php-ext-install zip
-
-# PHP EXT Sockets
-RUN docker-php-ext-install sockets
-
-# PHP EXT SOAP
-RUN docker-php-ext-install soap
-
-# PHP EXT GD
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install gd
-
-# PHP EXT Redis
-RUN pecl install -o -f redis \
-    &&  rm -rf /tmp/pear \
-    &&  docker-php-ext-enable redis 
-
-# PHP EXT pcntl
-RUN docker-php-ext-configure pcntl --enable-pcntl \
-    && docker-php-ext-install \
-    pcntl
-
-# PHP EXT intl
-RUN apt-get -y update \
-    && apt-get install -y zlib1g-dev libicu-dev g++\ 
-    && docker-php-ext-configure intl --enable-intl \
-    && docker-php-ext-install \
-    intl
+# Install Xdebug for PHP 8.3
+RUN pecl install xdebug-3.3.2 \
+    && docker-php-ext-enable xdebug
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-## Clean repo cache
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-RUN apt-get -y autoremove
-RUN apt-get clean
+# Set working directory
+WORKDIR /var/www/projects
+
+# Configure www-data user for consistency
+RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
+
+# Create directories with proper permissions for PHP-FPM
+RUN mkdir -p /var/log/php /tmp/sessions /tmp/uploads /var/run/php-fpm /usr/local/var/log \
+    && chown -R www-data:www-data /var/log/php /tmp/sessions /tmp/uploads /var/run/php-fpm /usr/local/var/log \
+    && chmod 755 /var/log/php /var/run/php-fpm /usr/local/var/log \
+    && chmod 1777 /tmp/sessions /tmp/uploads
+
+# Change current user to www-data
+USER www-data
+
+# Expose port 9000 and start php-fpm server
+EXPOSE 9000
+CMD ["php-fpm", "--nodaemonize"]

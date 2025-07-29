@@ -1,100 +1,66 @@
 FROM php:7.3-fpm
+LABEL maintainer="docker-webstack"
+LABEL description="PHP 7.3 FPM optimized for Laravel with comprehensive extensions"
 
-RUN apt-get update && \
-    apt-get install -y \
-    freetds-bin \
-    freetds-dev \
-    freetds-common \
-    libzip-dev \
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    LOCALTIME=Asia/Kuala_Lumpur \
+    PHPFPM__access.format='"%R - %u [%t] \"%m %r\" %s %l %Q %f"'
+
+# Install system dependencies for Laravel
+RUN apt-get update && apt-get install -y \
+    curl \
     libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip \
-    gnupg2 \
+    libonig-dev \
     libxml2-dev \
-    && apt-get install -y locales \
-    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen \
-    && locale-gen 
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
-    && docker-php-ext-configure mysqli --with-mysqli=mysqlnd \
-    && docker-php-ext-install pdo_mysql \
-    && docker-php-ext-install mysqli \
-    && docker-php-ext-install bcmath  
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-install -j$(nproc) \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    opcache \
+    mysqli
 
-# Install soap
-RUN docker-php-ext-install soap
+# Install Redis extension
+RUN pecl install redis-5.3.4 \
+    && docker-php-ext-enable redis
 
-# PHP EXT File exif
-RUN docker-php-ext-install exif && docker-php-ext-enable exif
-
-# PHP EXT Zip
-RUN docker-php-ext-install zip
-
-# PHP EXT GD
-RUN docker-php-ext-configure gd
-#  --with-freetype --with-jpeg
-RUN docker-php-ext-install gd
-
-# PHP EXT Redis
-# RUN apt-get install -y php-redis
-RUN pecl install -o -f redis \
-    &&  rm -rf /tmp/pear \
-    &&  docker-php-ext-enable redis 
-# RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
-#     && pecl install redis \
-#     && docker-php-ext-enable redis.so
-
-# PHP EXT pcntl
-RUN docker-php-ext-configure pcntl --enable-pcntl \
-    && docker-php-ext-install \
-    pcntl
-
-# PHP EXT intl
-RUN apt-get -y update \
-    && apt-get install -y zlib1g-dev libicu-dev g++\ 
-    && docker-php-ext-configure intl --enable-intl \
-    && docker-php-ext-install \
-    intl
-
-# remove list
-RUN rm -rf /var/lib/apt/lists/*
-
-# install xdebug
-RUN pecl install xdebug-2.9.2
-RUN docker-php-ext-enable xdebug
-
-RUN echo "xdebug.remote_enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN echo "xdebug.remote_autostart=0" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN echo "xdebug.default_enable=0" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN echo "xdebug.remote_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN echo "xdebug.remote_port=9000" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN echo "xdebug.remote_connect_back=0" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN echo "xdebug.profiler_enable=0" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN echo "xdebug.remote_log=\"/tmp/xdebug.log\"" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-
-
-
-ENV LOCALTIME Asia/Kuala_Lumpur
-ENV PHPFPM__access.format '"%R - %u [%t] \"%m %r\" %s %l %Q %f"'
-
-WORKDIR /var/www
+# Install Xdebug for PHP 7.3
+RUN pecl install xdebug-2.9.8 \
+    && docker-php-ext-enable xdebug
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer --version=2.2.24
 
+# Set working directory
+WORKDIR /var/www/projects
 
-### Special modifications for the www-data user.
+# Configure www-data user for consistency
+RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
 
-RUN groupadd -og 999 docker && usermod -a -G docker www-data
+# Create directories with proper permissions for PHP-FPM
+RUN mkdir -p /var/log/php /tmp/sessions /tmp/uploads /var/run/php-fpm /usr/local/var/log \
+    && chown -R www-data:www-data /var/log/php /tmp/sessions /tmp/uploads /var/run/php-fpm /usr/local/var/log \
+    && chmod 755 /var/log/php /var/run/php-fpm /usr/local/var/log \
+    && chmod 1777 /tmp/sessions /tmp/uploads
 
+# Change current user to www-data
+USER www-data
 
-# Add www-data environment (for SSH mostly)
-#RUN sed -i 's/\#umask 022/umask 002/' /etc/skel/.profile
-#RUN usermod -d /home/www-data -s /bin/bash www-data \
-#    && cp -av /etc/skel /home/www-data \
-#    && mv /var/www /home/www-data/www \
-#    && ln -s /home/www-data/www /var/www \
-#    && chown -R www-data:www-data /home/www-data
-
-
+# Expose port 9000 and start php-fpm server
+EXPOSE 9000
+CMD ["php-fpm", "--nodaemonize"]
